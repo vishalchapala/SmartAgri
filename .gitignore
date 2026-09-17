@@ -1,0 +1,65 @@
+# =========================
+# Node.js
+# =========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# =========================
+# Environment Variables
+# =========================
+
+.env
+.env.*
+!.env.example
+
+
+# =========================
+# Uploads
+# =========================
+
+server/uploads/
+ai/uploads/
+
+
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+.venv/
+venv/
+env/
+
+
+# =========================
+# Machine Learning
+# =========================
+
+ai/dataset/
+
+*.pth
+*.pt
+*.pkl
+
+# =========================
+# OS / Editor
+# =========================
+
+.DS_Store
+Thumbs.db
+.vscode/
+
+
+# =========================
+# Logs
+# =========================
+
+*.log
