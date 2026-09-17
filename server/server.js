@@ -87,54 +87,29 @@ app.post("/api/crop-recommendation", async (req, res) => {
       });
     }
 
-    let crop = "Maize";
-    let confidence = 75;
-    let reason = "The given conditions are suitable for maize cultivation.";
+    // Send data to Python ML server
+    const response = await axios.post(
+      "http://127.0.0.1:8000/predict-crop",
+      {
+        nitrogen: Number(nitrogen),
+        phosphorus: Number(phosphorus),
+        potassium: Number(potassium),
+        temperature: Number(temperature),
+        humidity: Number(humidity),
+        ph: Number(ph),
+        rainfall: Number(rainfall),
+      }
+    );
 
-    // Simple recommendation rules
-    if (
-      temperature >= 20 &&
-      temperature <= 35 &&
-      humidity >= 60 &&
-      rainfall >= 150 &&
-      ph >= 5.5 &&
-      ph <= 7.5
-    ) {
-      crop = "Rice";
-      confidence = 92;
-      reason =
-        "The temperature, humidity, rainfall and soil pH are favorable for rice.";
-    } else if (
-      temperature >= 15 &&
-      temperature <= 30 &&
-      rainfall >= 50 &&
-      rainfall <= 150 &&
-      ph >= 6 &&
-      ph <= 7.5
-    ) {
-      crop = "Wheat";
-      confidence = 87;
-      reason =
-        "The temperature, rainfall and soil pH conditions are suitable for wheat.";
-    } else if (
-      temperature >= 20 &&
-      temperature <= 35 &&
-      humidity >= 40 &&
-      rainfall >= 50 &&
-      rainfall <= 120
-    ) {
-      crop = "Cotton";
-      confidence = 84;
-      reason =
-        "The temperature, humidity and rainfall conditions are favorable for cotton.";
-    }
+    const prediction = response.data.prediction;
 
     res.json({
-      message: "Crop recommendation generated successfully",
+      message: "AI crop recommendation generated successfully",
       recommendation: {
-        crop,
-        confidence,
-        reason,
+        crop: prediction.crop,
+        confidence: prediction.confidence,
+        reason:
+          "The recommendation was generated using the SmartAgri Random Forest machine learning model.",
         input: {
           nitrogen,
           phosphorus,
@@ -148,8 +123,13 @@ app.post("/api/crop-recommendation", async (req, res) => {
       },
     });
   } catch (error) {
+    console.error(
+      "Crop ML recommendation failed:",
+      error.message
+    );
+
     res.status(500).json({
-      message: "Failed to generate crop recommendation",
+      message: "Failed to generate AI crop recommendation",
       error: error.message,
     });
   }

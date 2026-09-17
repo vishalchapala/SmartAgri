@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import torch
+import joblib
 from torchvision import transforms, models
 from PIL import Image
 from torch import nn
@@ -16,6 +17,7 @@ app = Flask(__name__)
 MODEL_PATH = r"C:\Users\VISHAL CHAPALA\SmartAgri\ai\model\plant_disease_model.pth"
 
 CLASS_NAMES_PATH = r"C:\Users\VISHAL CHAPALA\SmartAgri\ai\model\class_names.json"
+CROP_MODEL_PATH = r"C:\Users\VISHAL CHAPALA\SmartAgri\ai\model\crop_recommendation_model.pkl"
 
 
 # ==========================================
@@ -53,6 +55,13 @@ model.load_state_dict(
 model.eval()
 
 print("✅ Disease model loaded successfully!")
+# ==========================================
+# LOAD CROP RECOMMENDATION MODEL
+# ==========================================
+
+crop_model = joblib.load(CROP_MODEL_PATH)
+
+print("✅ Crop recommendation model loaded successfully!")
 
 
 # ==========================================
@@ -353,7 +362,70 @@ def predict():
             "error": str(error)
 
         }), 500
+# ==========================================
+# CROP RECOMMENDATION
+# ==========================================
 
+@app.route("/predict-crop", methods=["POST"])
+def predict_crop():
+
+    try:
+        data = request.get_json()
+
+        nitrogen = float(data["nitrogen"])
+        phosphorus = float(data["phosphorus"])
+        potassium = float(data["potassium"])
+        temperature = float(data["temperature"])
+        humidity = float(data["humidity"])
+        ph = float(data["ph"])
+        rainfall = float(data["rainfall"])
+
+        features = [[
+            nitrogen,
+            phosphorus,
+            potassium,
+            temperature,
+            humidity,
+            ph,
+            rainfall
+        ]]
+
+        prediction = crop_model.predict(features)[0]
+
+        probabilities = crop_model.predict_proba(features)[0]
+        confidence = max(probabilities) * 100
+        
+        # ==========================================
+        # CROP RECOMMENDATION EXPLANATION
+        # ==========================================
+
+        reason = (
+            f"The AI model analyzed the soil nutrients (N: {nitrogen}, "
+            f"P: {phosphorus}, K: {potassium}), temperature "
+            f"({temperature}°C), humidity ({humidity}%), soil pH "
+            f"({ph}), and rainfall ({rainfall} mm). "
+            f"Based on these conditions, the model recommends {prediction}."
+        )
+        print("🌱 Recommended Crop:", prediction)
+        print(f"📊 Confidence: {confidence:.2f}%")
+
+        return jsonify({
+            "status": "success",
+            "prediction": {
+    "crop": prediction,
+    "confidence": round(confidence, 2),
+    "reason": reason
+}
+        })
+
+    except Exception as error:
+
+        print("❌ Crop recommendation error:", error)
+
+        return jsonify({
+            "status": "error",
+            "message": str(error)
+        }), 500
 
 # ==========================================
 # START SERVER
