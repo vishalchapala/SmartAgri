@@ -62,18 +62,34 @@ function CropRecommendation() {
       const data = await response.json();
 
       if (response.ok) {
+        // Store result on this page
         setResult(data.recommendation);
+
+        // Save latest AI crop recommendation
+        localStorage.setItem(
+          "smartAgriCropRecommendation",
+          JSON.stringify(data.recommendation)
+        );
+
+        // Notify Dashboard about the new recommendation
+        window.dispatchEvent(
+          new Event("smartAgriCropRecommendationUpdated")
+        );
+
         setMessage("✅ Recommendation generated successfully!");
       } else {
-        setMessage("❌ " + data.message);
+        setMessage("❌ " + (data.message || "Something went wrong."));
       }
     } catch (error) {
+      console.error("Crop recommendation error:", error);
       setMessage("❌ Cannot connect to backend.");
     }
   };
 
   return (
     <div className="page">
+
+      {/* PAGE HEADER */}
 
       <div className="page-header">
         <p className="small-title">AI ASSISTANT</p>
@@ -86,14 +102,20 @@ function CropRecommendation() {
         </p>
       </div>
 
+
+      {/* FARM CONDITIONS */}
+
       <div className="form-card">
 
         <h2>Farm Conditions</h2>
 
         <div className="form-grid">
 
+          {/* Nitrogen */}
+
           <div>
             <label>Nitrogen (N)</label>
+
             <input
               type="number"
               placeholder="Example: 90"
@@ -102,8 +124,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Phosphorus */}
+
           <div>
             <label>Phosphorus (P)</label>
+
             <input
               type="number"
               placeholder="Example: 42"
@@ -112,8 +138,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Potassium */}
+
           <div>
             <label>Potassium (K)</label>
+
             <input
               type="number"
               placeholder="Example: 43"
@@ -122,8 +152,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Temperature */}
+
           <div>
             <label>Temperature (°C)</label>
+
             <input
               type="number"
               placeholder="Example: 25"
@@ -132,8 +166,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Humidity */}
+
           <div>
             <label>Humidity (%)</label>
+
             <input
               type="number"
               placeholder="Example: 70"
@@ -142,8 +180,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Soil pH */}
+
           <div>
             <label>Soil pH</label>
+
             <input
               type="number"
               step="0.1"
@@ -155,8 +197,12 @@ function CropRecommendation() {
             />
           </div>
 
+
+          {/* Rainfall */}
+
           <div>
             <label>Rainfall (mm)</label>
+
             <input
               type="number"
               placeholder="Example: 200"
@@ -164,6 +210,9 @@ function CropRecommendation() {
               onChange={(e) => setRainfall(e.target.value)}
             />
           </div>
+
+
+          {/* Soil Type */}
 
           <div>
             <label>Soil Type</label>
@@ -173,15 +222,33 @@ function CropRecommendation() {
               onChange={(e) => setSoilType(e.target.value)}
             >
               <option value="">Select soil type</option>
-              <option value="Clay">Clay</option>
-              <option value="Loamy">Loamy</option>
-              <option value="Sandy">Sandy</option>
-              <option value="Black Soil">Black Soil</option>
-              <option value="Red Soil">Red Soil</option>
+
+              <option value="Clay">
+                Clay
+              </option>
+
+              <option value="Loamy">
+                Loamy
+              </option>
+
+              <option value="Sandy">
+                Sandy
+              </option>
+
+              <option value="Black Soil">
+                Black Soil
+              </option>
+
+              <option value="Red Soil">
+                Red Soil
+              </option>
             </select>
           </div>
 
         </div>
+
+
+        {/* AI BUTTON */}
 
         <button
           className="primary-btn"
@@ -189,6 +256,9 @@ function CropRecommendation() {
         >
           🤖 Get AI Recommendation
         </button>
+
+
+        {/* MESSAGE */}
 
         {message && (
           <p style={{ marginTop: "15px" }}>
@@ -199,7 +269,7 @@ function CropRecommendation() {
       </div>
 
 
-      {/* Recommendation Result */}
+      {/* AI RESULT */}
 
       {result && (
         <div
@@ -210,8 +280,13 @@ function CropRecommendation() {
           <div className="panel-header">
 
             <div>
-              <p className="small-title">AI RESULT</p>
-              <h2>Recommended Crop</h2>
+              <p className="small-title">
+                AI RESULT
+              </p>
+
+              <h2>
+                Recommended Crop
+              </h2>
             </div>
 
             <span className="ai-badge">
@@ -220,29 +295,38 @@ function CropRecommendation() {
 
           </div>
 
+
           <div className="recommendation">
 
             <div className="crop-image">
               🌾
             </div>
 
+
             <div>
 
-              <h3>{result.crop}</h3>
+              <h3>
+                {result.crop}
+              </h3>
+
 
               <p>
                 {result.reason}
               </p>
 
+
               <div className="confidence">
 
-                <span>Recommendation Confidence</span>
+                <span>
+                  Recommendation Confidence
+                </span>
 
                 <strong>
                   {result.confidence}%
                 </strong>
 
               </div>
+
 
               <div className="progress">
 

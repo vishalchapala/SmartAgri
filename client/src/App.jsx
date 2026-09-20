@@ -7,6 +7,10 @@ import Weather from "./pages/Weather";
 import SoilAnalysis from "./pages/SoilAnalysis";
 import MyFarm from "./pages/MyFarm";
 import FertilizerRecommendation from "./pages/FertilizerRecommendation";
+import Profile from "./pages/Profile";
+import SignUp from "./pages/SignUp";
+import Login from "./pages/Login";
+
 
 function App() {
   // =========================================
@@ -14,11 +18,31 @@ function App() {
   // =========================================
 
   const [page, setPage] = useState("dashboard");
+
   const [farmCount, setFarmCount] = useState(0);
+
   const [dashboardWeather, setDashboardWeather] = useState(null);
+
   const [weatherForecast, setWeatherForecast] = useState(null);
+
   const [backendMessage, setBackendMessage] = useState("");
-  const [cropRecommendation, setCropRecommendation] = useState(null);
+
+  const [cropRecommendation, setCropRecommendation] = useState(() => {
+    try {
+      const savedCrop = localStorage.getItem(
+        "smartAgriCropRecommendation"
+      );
+
+      return savedCrop ? JSON.parse(savedCrop) : null;
+    } catch (error) {
+      console.error(
+        "Failed to load saved crop recommendation:",
+        error
+      );
+      return null;
+    }
+  });
+
   const [fertilizerRecommendation, setFertilizerRecommendation] =
     useState(null);
 
@@ -45,6 +69,73 @@ function App() {
       return null;
     }
   });
+
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const [readNotifications, setReadNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem("smartAgriReadNotifications");
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error("Failed to load notification state:", error);
+      return [];
+    }
+  });
+
+  // =========================================
+  // PROFILE
+  // =========================================
+
+  const [profileName, setProfileName] = useState(() => {
+    try {
+      const savedProfile = localStorage.getItem("smartAgriProfile");
+
+      if (savedProfile) {
+        const profile = JSON.parse(savedProfile);
+        return profile.name || "Farmer";
+      }
+
+      return "Farmer";
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      return "Farmer";
+    }
+  });
+
+
+  // =========================================
+  // PROFILE NAME UPDATE
+  // =========================================
+
+  useEffect(() => {
+    const updateProfileName = () => {
+      try {
+        const savedProfile = localStorage.getItem("smartAgriProfile");
+
+        if (savedProfile) {
+          const profile = JSON.parse(savedProfile);
+          setProfileName(profile.name || "Farmer");
+        } else {
+          setProfileName("Farmer");
+        }
+      } catch (error) {
+        console.error("Failed to update profile name:", error);
+      }
+    };
+
+    window.addEventListener(
+      "smartAgriProfileUpdated",
+      updateProfileName
+    );
+
+    return () => {
+      window.removeEventListener(
+        "smartAgriProfileUpdated",
+        updateProfileName
+      );
+    };
+  }, []);
+
 
   // =========================================
   // GET FARM COUNT FROM MONGODB
@@ -74,6 +165,7 @@ function App() {
           if (!response.ok) {
             throw new Error("Weather API request failed");
           }
+
           return response.json();
         })
         .then((data) => {
@@ -81,7 +173,10 @@ function App() {
           setWeatherForecast(data.daily);
         })
         .catch((error) => {
-          console.error("Failed to fetch dashboard weather:", error);
+          console.error(
+            "Failed to fetch dashboard weather:",
+            error
+          );
         });
     };
 
@@ -117,16 +212,24 @@ function App() {
   useEffect(() => {
     const updateDiseaseResult = () => {
       try {
-        const savedDisease = localStorage.getItem("diseaseResult");
+        const savedDisease =
+          localStorage.getItem("diseaseResult");
+
         if (savedDisease) {
           setDiseaseResult(JSON.parse(savedDisease));
         }
       } catch (error) {
-        console.error("Failed to update disease result:", error);
+        console.error(
+          "Failed to update disease result:",
+          error
+        );
       }
     };
 
-    window.addEventListener("diseaseResultUpdated", updateDiseaseResult);
+    window.addEventListener(
+      "diseaseResultUpdated",
+      updateDiseaseResult
+    );
 
     return () => {
       window.removeEventListener(
@@ -141,23 +244,71 @@ function App() {
   // =========================================
 
   const getWeatherCondition = (code) => {
-    if (code === 0) return { icon: "☀️", text: "Clear Sky" };
-    if (code === 1 || code === 2)
-      return { icon: "🌤️", text: "Partly Cloudy" };
-    if (code === 3) return { icon: "☁️", text: "Cloudy" };
-    if (code >= 45 && code <= 48)
-      return { icon: "🌫️", text: "Foggy" };
-    if (code >= 51 && code <= 67)
-      return { icon: "🌧️", text: "Rainy" };
-    if (code >= 71 && code <= 77)
-      return { icon: "❄️", text: "Snowy" };
-    if (code >= 80 && code <= 82)
-      return { icon: "🌦️", text: "Rain Showers" };
-    if (code >= 95)
-      return { icon: "⛈️", text: "Thunderstorm" };
+    if (code === 0) {
+      return {
+        icon: "☀️",
+        text: "Clear Sky",
+      };
+    }
 
-    return { icon: "🌤️", text: "Unknown" };
+    if (code === 1 || code === 2) {
+      return {
+        icon: "🌤️",
+        text: "Partly Cloudy",
+      };
+    }
+
+    if (code === 3) {
+      return {
+        icon: "☁️",
+        text: "Cloudy",
+      };
+    }
+
+    if (code >= 45 && code <= 48) {
+      return {
+        icon: "🌫️",
+        text: "Foggy",
+      };
+    }
+
+    if (code >= 51 && code <= 67) {
+      return {
+        icon: "🌧️",
+        text: "Rainy",
+      };
+    }
+
+    if (code >= 71 && code <= 77) {
+      return {
+        icon: "❄️",
+        text: "Snowy",
+      };
+    }
+
+    if (code >= 80 && code <= 82) {
+      return {
+        icon: "🌦️",
+        text: "Rain Showers",
+      };
+    }
+
+    if (code >= 95) {
+      return {
+        icon: "⛈️",
+        text: "Thunderstorm",
+      };
+    }
+
+    return {
+      icon: "🌤️",
+      text: "Unknown",
+    };
   };
+
+  // =========================================
+  // FORECAST WEATHER ICON
+  // =========================================
 
   const getForecastCondition = (code) => {
     if (code === 0) return "☀️";
@@ -168,8 +319,22 @@ function App() {
     if (code >= 71 && code <= 77) return "❄️";
     if (code >= 80 && code <= 82) return "🌦️";
     if (code >= 95) return "⛈️";
+
     return "🌤️";
   };
+
+  // =========================================
+  // CURRENT WEATHER
+  // =========================================
+
+  const weatherCondition = dashboardWeather
+    ? getWeatherCondition(
+        dashboardWeather.weather_code
+      )
+    : {
+        icon: "🌤️",
+        text: "Loading...",
+      };
 
   // =========================================
   // WEATHER RISK
@@ -180,12 +345,16 @@ function App() {
       return {
         level: "Analyzing",
         icon: "🔄",
-        message: "Analyzing upcoming weather conditions.",
+        message:
+          "Analyzing upcoming weather conditions.",
       };
     }
 
-    const maxTemperatures = weatherForecast.temperature_2m_max || [];
-    const rainfallValues = weatherForecast.precipitation_sum || [];
+    const maxTemperatures =
+      weatherForecast.temperature_2m_max || [];
+
+    const rainfallValues =
+      weatherForecast.precipitation_sum || [];
 
     const maxTemp =
       maxTemperatures.length > 0
@@ -243,397 +412,65 @@ function App() {
       return {
         status: "Analyzing...",
         icon: "🔄",
-        score: 0,
-        message: "Analyzing current farm conditions.",
+        message:
+          "Analyzing current farm conditions.",
       };
     }
 
-    let score = 100;
-
     const moisture = Number(soilMoisture);
-    const temperature = Number(dashboardWeather.temperature_2m);
-    const humidity = Number(dashboardWeather.relative_humidity_2m);
-    const rainfall = Number(dashboardWeather.precipitation);
 
-    if (moisture < 30) score -= 20;
-    else if (moisture < 40) score -= 10;
-    else if (moisture > 80) score -= 15;
-    else if (moisture > 70) score -= 5;
+    const temperature = Number(
+      dashboardWeather.temperature_2m
+    );
 
-    if (temperature > 38) score -= 15;
-    else if (temperature > 35) score -= 5;
-    else if (temperature < 10) score -= 10;
+    const humidity = Number(
+      dashboardWeather.relative_humidity_2m
+    );
 
-    if (humidity > 90) score -= 10;
-    else if (humidity > 85) score -= 5;
-    else if (humidity < 25) score -= 5;
+    const rainfall = Number(
+      dashboardWeather.precipitation
+    );
 
-    if (rainfall > 10) score -= 10;
-    else if (rainfall > 5) score -= 5;
-
-    if (soilData) {
-      const nitrogen = Number(soilData.nitrogen);
-      const phosphorus = Number(soilData.phosphorus);
-      const potassium = Number(soilData.potassium);
-      const ph = Number(soilData.ph);
-
-      if (nitrogen < 40 || nitrogen > 140) score -= 5;
-      if (phosphorus < 20 || phosphorus > 100) score -= 5;
-      if (potassium < 20 || potassium > 100) score -= 5;
-      if (ph < 5.5 || ph > 8) score -= 10;
+    if (moisture < 30 || temperature > 38) {
+      return {
+        status: "Needs Attention",
+        icon: "⚠️",
+        message:
+          "Your farm may need attention. Check soil moisture and protect crops from heat stress.",
+      };
     }
 
-    if (diseaseResult) {
-      const status = String(
-        diseaseResult.status || ""
-      ).toLowerCase();
-
-      const disease = String(
-        diseaseResult.disease || ""
-      ).toLowerCase();
-
-      const isHealthy =
-        status.includes("healthy") ||
-        disease.includes("healthy") ||
-        disease.includes("no disease");
-
-      if (!isHealthy) score -= 20;
+    if (humidity > 90 || rainfall > 10) {
+      return {
+        status: "Monitor Conditions",
+        icon: "👀",
+        message:
+          "Current weather conditions may increase crop stress or disease risk. Monitor your field.",
+      };
     }
 
-    score = Math.max(0, Math.min(100, score));
-
-    let status = "Healthy";
-    let icon = "🌱";
-    let message =
-      "Current soil moisture and environmental conditions are favorable for crop growth.";
-
-    if (score < 50) {
-      status = "Needs Attention";
-      icon = "⚠️";
-      message =
-        "Your farm may need attention. Check soil, moisture, and environmental conditions.";
-    } else if (score < 70) {
-      status = "Monitor Conditions";
-      icon = "👀";
-      message =
-        "Some farm conditions need monitoring. Check your soil and weather conditions.";
-    } else if (score < 85) {
-      status = "Moderate";
-      icon = "🌿";
-      message =
-        "Farm conditions are moderate. Continue monitoring your soil and weather.";
+    if (
+      moisture >= 40 &&
+      moisture <= 70 &&
+      temperature <= 35
+    ) {
+      return {
+        status: "Healthy",
+        icon: "🌱",
+        message:
+          "Current soil moisture and environmental conditions are favorable for crop growth.",
+      };
     }
 
-    return { status, icon, score, message };
+    return {
+      status: "Moderate",
+      icon: "🌿",
+      message:
+        "Farm conditions are moderate. Continue monitoring soil and weather conditions.",
+    };
   };
 
   const farmHealth = getFarmHealth();
-
-  // =========================================
-  // HEALTH FACTORS
-  // =========================================
-
-  const getHealthFactor = (type) => {
-    if (type === "moisture") {
-      const moisture = Number(soilMoisture);
-
-      if (moisture < 30) return { status: "Low", icon: "⚠️" };
-      if (moisture < 40) return { status: "Below Optimal", icon: "🟡" };
-      if (moisture <= 70) return { status: "Optimal", icon: "✅" };
-      if (moisture <= 80) return { status: "High", icon: "🟡" };
-      return { status: "Too High", icon: "⚠️" };
-    }
-
-    if (type === "temperature") {
-      if (!dashboardWeather) return { status: "Loading...", icon: "🔄" };
-
-      const temperature = Number(dashboardWeather.temperature_2m);
-
-      if (temperature < 10 || temperature > 38)
-        return { status: "Critical", icon: "⚠️" };
-
-      if (temperature > 35)
-        return { status: "Warm", icon: "🟡" };
-
-      return { status: "Suitable", icon: "✅" };
-    }
-
-    if (type === "humidity") {
-      if (!dashboardWeather) return { status: "Loading...", icon: "🔄" };
-
-      const humidity = Number(
-        dashboardWeather.relative_humidity_2m
-      );
-
-      if (humidity < 25 || humidity > 90)
-        return { status: "High Risk", icon: "⚠️" };
-
-      if (humidity > 85)
-        return { status: "High", icon: "🟡" };
-
-      return { status: "Normal", icon: "✅" };
-    }
-
-    if (type === "rainfall") {
-      if (!dashboardWeather) return { status: "Loading...", icon: "🔄" };
-
-      const rainfall = Number(dashboardWeather.precipitation);
-
-      if (rainfall > 10)
-        return { status: "High", icon: "⚠️" };
-
-      if (rainfall > 5)
-        return { status: "Moderate", icon: "🟡" };
-
-      return { status: "Normal", icon: "✅" };
-    }
-
-    if (type === "soil") {
-      if (!soilData)
-        return { status: "Not Analyzed", icon: "⚪" };
-
-      const nitrogen = Number(soilData.nitrogen);
-      const phosphorus = Number(soilData.phosphorus);
-      const potassium = Number(soilData.potassium);
-      const ph = Number(soilData.ph);
-      const issues = [];
-
-      if (nitrogen < 40 || nitrogen > 140) issues.push("N");
-      if (phosphorus < 20 || phosphorus > 100) issues.push("P");
-      if (potassium < 20 || potassium > 100) issues.push("K");
-      if (ph < 5.5 || ph > 8) issues.push("pH");
-
-      if (issues.length > 0)
-        return {
-          status: `Check ${issues.join(", ")}`,
-          icon: "⚠️",
-        };
-
-      return { status: "Balanced", icon: "✅" };
-    }
-
-    if (type === "crop") {
-      if (!diseaseResult)
-        return { status: "Not Analyzed", icon: "⚪" };
-
-      const status = String(
-        diseaseResult.status || ""
-      ).toLowerCase();
-
-      const disease = String(
-        diseaseResult.disease || ""
-      ).toLowerCase();
-
-      const healthy =
-        status.includes("healthy") ||
-        disease.includes("healthy") ||
-        disease.includes("no disease");
-
-      return healthy
-        ? { status: "Healthy", icon: "✅" }
-        : { status: "Disease Detected", icon: "⚠️" };
-    }
-
-    return { status: "Unknown", icon: "ℹ️" };
-  };
-
-  const healthMoisture = getHealthFactor("moisture");
-  const healthTemperature = getHealthFactor("temperature");
-  const healthHumidity = getHealthFactor("humidity");
-  const healthRainfall = getHealthFactor("rainfall");
-  const healthSoil = getHealthFactor("soil");
-  const healthCrop = getHealthFactor("crop");
-
-  // =========================================
-  // STEP 3 - SMART ALERTS
-  // =========================================
-
-  const getSmartAlerts = () => {
-    const alerts = [];
-
-    const moisture = Number(soilMoisture);
-
-    const temperature = dashboardWeather
-      ? Number(dashboardWeather.temperature_2m)
-      : null;
-
-    const humidity = dashboardWeather
-      ? Number(dashboardWeather.relative_humidity_2m)
-      : null;
-
-    const rainfall = dashboardWeather
-      ? Number(dashboardWeather.precipitation)
-      : null;
-
-    if (moisture < 30) {
-      alerts.push({
-        type: "warning",
-        icon: "💧",
-        title: "Low Soil Moisture",
-        message:
-          "Soil moisture is low. Consider irrigation to prevent crop stress.",
-      });
-    } else if (moisture > 80) {
-      alerts.push({
-        type: "warning",
-        icon: "💧",
-        title: "High Soil Moisture",
-        message:
-          "Soil moisture is high. Avoid unnecessary irrigation and monitor drainage.",
-      });
-    } else {
-      alerts.push({
-        type: "success",
-        icon: "💧",
-        title: "Soil Moisture Normal",
-        message:
-          "Current soil moisture is within a suitable range.",
-      });
-    }
-
-    if (temperature !== null) {
-      if (temperature > 38) {
-        alerts.push({
-          type: "warning",
-          icon: "🌡️",
-          title: "High Temperature",
-          message:
-            "High temperature detected. Monitor crops for heat stress and maintain adequate irrigation.",
-        });
-      } else if (temperature < 10) {
-        alerts.push({
-          type: "warning",
-          icon: "🥶",
-          title: "Low Temperature",
-          message:
-            "Low temperature detected. Monitor crops for cold-related stress.",
-        });
-      } else {
-        alerts.push({
-          type: "success",
-          icon: "🌡️",
-          title: "Temperature Suitable",
-          message:
-            "Current temperature is suitable for normal crop monitoring.",
-        });
-      }
-    }
-
-    if (rainfall !== null) {
-      if (rainfall > 10) {
-        alerts.push({
-          type: "info",
-          icon: "🌧️",
-          title: "High Rainfall",
-          message:
-            "Rainfall is high. Reduce or delay irrigation if the soil is already wet.",
-        });
-      } else if (rainfall > 5) {
-        alerts.push({
-          type: "info",
-          icon: "🌦️",
-          title: "Moderate Rainfall",
-          message:
-            "Moderate rainfall detected. Check soil moisture before irrigation.",
-        });
-      }
-    }
-
-    if (humidity !== null && humidity > 85) {
-      alerts.push({
-        type: "warning",
-        icon: "💨",
-        title: "High Humidity",
-        message:
-          "High humidity detected. Monitor crops regularly for possible disease conditions.",
-      });
-    }
-
-    if (soilData) {
-      const nitrogen = Number(soilData.nitrogen);
-      const phosphorus = Number(soilData.phosphorus);
-      const potassium = Number(soilData.potassium);
-      const ph = Number(soilData.ph);
-
-      if (nitrogen < 40) {
-        alerts.push({
-          type: "info",
-          icon: "🧪",
-          title: "Low Nitrogen",
-          message:
-            "Nitrogen level is low. Check the fertilizer recommendation.",
-        });
-      }
-
-      if (phosphorus < 20) {
-        alerts.push({
-          type: "info",
-          icon: "🧪",
-          title: "Low Phosphorus",
-          message:
-            "Phosphorus level is low. Review the fertilizer recommendation.",
-        });
-      }
-
-      if (potassium < 20) {
-        alerts.push({
-          type: "info",
-          icon: "🧪",
-          title: "Low Potassium",
-          message:
-            "Potassium level is low. Review the fertilizer recommendation.",
-        });
-      }
-
-      if (ph < 5.5 || ph > 8) {
-        alerts.push({
-          type: "warning",
-          icon: "⚗️",
-          title: "Soil pH Needs Attention",
-          message:
-            "Soil pH is outside the monitored range. Review your soil analysis.",
-        });
-      }
-    }
-
-    if (diseaseResult) {
-      const status = String(
-        diseaseResult.status || ""
-      ).toLowerCase();
-
-      const disease = String(
-        diseaseResult.disease || ""
-      ).toLowerCase();
-
-      const isHealthy =
-        status.includes("healthy") ||
-        disease.includes("healthy") ||
-        disease.includes("no disease");
-
-      if (!isHealthy) {
-        alerts.push({
-          type: "danger",
-          icon: "🦠",
-          title: "Crop Disease Detected",
-          message:
-            diseaseResult.disease ||
-            "The AI disease detection system identified a possible crop disease.",
-        });
-      } else {
-        alerts.push({
-          type: "success",
-          icon: "🌱",
-          title: "Crop Health Good",
-          message:
-            "The latest AI disease analysis indicates healthy crop conditions.",
-        });
-      }
-    }
-
-    return alerts;
-  };
-
-  const smartAlerts = getSmartAlerts();
 
   // =========================================
   // IRRIGATION INTELLIGENCE
@@ -650,8 +487,14 @@ function App() {
     }
 
     const moisture = Number(soilMoisture);
-    const rainfall = Number(dashboardWeather.precipitation);
-    const temperature = Number(dashboardWeather.temperature_2m);
+
+    const rainfall = Number(
+      dashboardWeather.precipitation
+    );
+
+    const temperature = Number(
+      dashboardWeather.temperature_2m
+    );
 
     if (rainfall > 5) {
       return {
@@ -714,7 +557,6 @@ function App() {
 
   useEffect(() => {
     if (!dashboardWeather || !soilData) {
-      setCropRecommendation(null);
       return;
     }
 
@@ -731,23 +573,30 @@ function App() {
               nitrogen: Number(soilData.nitrogen),
               phosphorus: Number(soilData.phosphorus),
               potassium: Number(soilData.potassium),
+
               temperature: Number(
                 dashboardWeather.temperature_2m
               ),
+
               humidity: Number(
                 dashboardWeather.relative_humidity_2m
               ),
+
               ph: Number(soilData.ph),
+
               rainfall: Number(
                 dashboardWeather.precipitation
               ),
+
               soilType: soilData.soilType,
             }),
           }
         );
 
         if (!response.ok) {
-          throw new Error("Crop recommendation API failed");
+          throw new Error(
+            "Crop recommendation API failed"
+          );
         }
 
         const data = await response.json();
@@ -763,12 +612,48 @@ function App() {
           "Dashboard crop recommendation failed:",
           error
         );
+
         setCropRecommendation(null);
       }
     };
 
     requestCropRecommendation();
   }, [dashboardWeather, soilData]);
+
+  // =========================================
+  // CROP RECOMMENDATION UPDATE
+  // =========================================
+
+  useEffect(() => {
+    const updateCropRecommendation = () => {
+      try {
+        const savedCrop = localStorage.getItem(
+          "smartAgriCropRecommendation"
+        );
+
+        if (savedCrop) {
+          setCropRecommendation(JSON.parse(savedCrop));
+        }
+      } catch (error) {
+        console.error(
+          "Failed to update crop recommendation:",
+          error
+        );
+      }
+    };
+
+    window.addEventListener(
+      "smartAgriCropRecommendationUpdated",
+      updateCropRecommendation
+    );
+
+    return () => {
+      window.removeEventListener(
+        "smartAgriCropRecommendationUpdated",
+        updateCropRecommendation
+      );
+    };
+  }, []);
 
   // =========================================
   // FERTILIZER RECOMMENDATION
@@ -803,16 +688,20 @@ function App() {
             "Fertilizer API request failed"
           );
         }
+
         return response.json();
       })
       .then((data) => {
-        setFertilizerRecommendation(data.recommendation);
+        setFertilizerRecommendation(
+          data.recommendation
+        );
       })
       .catch((error) => {
         console.error(
           "Dashboard fertilizer recommendation failed:",
           error
         );
+
         setFertilizerRecommendation(null);
       });
   }, [soilData]);
@@ -879,20 +768,64 @@ function App() {
   }, []);
 
   // =========================================
-  // RENDER
+  // NOTIFICATIONS
   // =========================================
 
-  const weatherCondition = dashboardWeather
-    ? getWeatherCondition(dashboardWeather.weather_code)
-    : {
-        icon: "🌤️",
-        text: "Loading...",
-      };
+  const notifications = [];
+
+  if (Number(soilMoisture) < 30) {
+    notifications.push({ id: "low-soil-moisture", icon: "💧", title: "Low Soil Moisture", message: "Soil moisture is low. Consider irrigation to prevent crop stress." });
+  }
+
+  if (dashboardWeather) {
+    if (Number(dashboardWeather.temperature_2m) > 38) {
+      notifications.push({ id: "high-temperature", icon: "🌡️", title: "High Temperature", message: "High temperature detected. Monitor crops for heat stress." });
+    }
+    if (Number(dashboardWeather.precipitation) > 10) {
+      notifications.push({ id: "high-rainfall", icon: "🌧️", title: "High Rainfall", message: "High rainfall detected. Avoid unnecessary irrigation." });
+    }
+    if (Number(dashboardWeather.relative_humidity_2m) > 85) {
+      notifications.push({ id: "high-humidity", icon: "💨", title: "High Humidity", message: "High humidity detected. Monitor crops for possible disease conditions." });
+    }
+  }
+
+  if (soilData) {
+    const nitrogen = Number(soilData.nitrogen);
+    const phosphorus = Number(soilData.phosphorus);
+    const potassium = Number(soilData.potassium);
+    const ph = Number(soilData.ph);
+
+    if (nitrogen < 40) notifications.push({ id: "low-nitrogen", icon: "🧪", title: "Low Nitrogen", message: "Nitrogen level is low. Check the fertilizer recommendation." });
+    if (phosphorus < 20) notifications.push({ id: "low-phosphorus", icon: "🧪", title: "Low Phosphorus", message: "Phosphorus level is low. Review the fertilizer recommendation." });
+    if (potassium < 20) notifications.push({ id: "low-potassium", icon: "🧪", title: "Low Potassium", message: "Potassium level is low. Review the fertilizer recommendation." });
+    if (ph < 5.5 || ph > 8) notifications.push({ id: "soil-ph", icon: "⚗️", title: "Soil pH Needs Attention", message: "Soil pH is outside the monitored range. Review your soil analysis." });
+  }
+
+  if (diseaseResult) {
+    const status = String(diseaseResult.status || "").toLowerCase();
+    const disease = String(diseaseResult.disease || "").toLowerCase();
+    const healthy = status.includes("healthy") || disease.includes("healthy") || disease.includes("no disease");
+    if (!healthy) notifications.push({ id: "crop-disease", icon: "🦠", title: "Crop Disease Detected", message: diseaseResult.disease || "The AI disease detection system identified a possible crop disease." });
+  }
+
+  const unreadNotifications = notifications.filter((notification) => !readNotifications.includes(notification.id));
+
+  const markAllNotificationsRead = () => {
+    const ids = notifications.map((notification) => notification.id);
+    setReadNotifications(ids);
+    localStorage.setItem("smartAgriReadNotifications", JSON.stringify(ids));
+  };
+
+  // =========================================
+  // RENDER
+  // =========================================
 
   return (
     <div className="dashboard">
 
-      {/* SIDEBAR */}
+      {/* =====================================
+          SIDEBAR
+          ===================================== */}
 
       <aside className="sidebar">
 
@@ -903,56 +836,80 @@ function App() {
         <nav>
 
           <a
-            className={page === "dashboard" ? "active" : ""}
+            className={
+              page === "dashboard" ? "active" : ""
+            }
             onClick={() => setPage("dashboard")}
           >
             📊 Dashboard
           </a>
 
           <a
-            className={page === "crop" ? "active" : ""}
+            className={
+              page === "crop" ? "active" : ""
+            }
             onClick={() => setPage("crop")}
           >
             🌾 Crop Recommendation
           </a>
 
           <a
-            className={page === "disease" ? "active" : ""}
+            className={
+              page === "disease" ? "active" : ""
+            }
             onClick={() => setPage("disease")}
           >
             🔬 Disease Detection
           </a>
 
           <a
-            className={page === "irrigation" ? "active" : ""}
-            onClick={() => setPage("irrigation")}
+            className={
+              page === "irrigation"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("irrigation")
+            }
           >
             💧 Smart Irrigation
           </a>
 
           <a
-            className={page === "weather" ? "active" : ""}
+            className={
+              page === "weather" ? "active" : ""
+            }
             onClick={() => setPage("weather")}
           >
             ☁️ Weather
           </a>
 
           <a
-            className={page === "soil" ? "active" : ""}
+            className={
+              page === "soil" ? "active" : ""
+            }
             onClick={() => setPage("soil")}
           >
             🌱 Soil Analysis
           </a>
 
           <a
-            className={page === "fertilizer" ? "active" : ""}
-            onClick={() => setPage("fertilizer")}
+            className={
+              page === "fertilizer"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("fertilizer")
+            }
           >
             🌿 Fertilizer Recommendation
           </a>
 
           <a
-            className={page === "farm" ? "active" : ""}
+            className={
+              page === "farm" ? "active" : ""
+            }
             onClick={() => setPage("farm")}
           >
             🚜 My Farm
@@ -961,7 +918,6 @@ function App() {
         </nav>
 
         <div className="sidebar-bottom">
-
           <a
             className={page === "settings" ? "active" : ""}
             onClick={() => setPage("settings")}
@@ -980,16 +936,19 @@ function App() {
           >
             🚪 Logout
           </a>
-
         </div>
 
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* =====================================
+          MAIN CONTENT
+          ===================================== */}
 
       <main className="dashboard-main">
 
-        {/* DASHBOARD */}
+        {/* ===================================
+            DASHBOARD PAGE
+            =================================== */}
 
         {page === "dashboard" && (
           <>
@@ -1005,11 +964,12 @@ function App() {
                 </p>
 
                 <h1>
-                  Good Morning, Farmer 👋
+                  Good Morning, {profileName} 👋
                 </h1>
 
                 <p className="dashboard-subtitle">
-                  Here is your farm overview for today.
+                  Here is your farm overview for
+                  today.
                 </p>
 
                 {backendMessage && (
@@ -1020,20 +980,89 @@ function App() {
 
               </div>
 
-              <div className="profile">
+              <div className="header-actions">
 
-                👨‍🌾
+                <div className="notification-wrapper">
+                  <button
+                    className="notification-button"
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    aria-label="Open notifications"
+                  >
+                    🔔
+                    {unreadNotifications.length > 0 && (
+                      <span className="notification-count">
+                        {unreadNotifications.length > 9 ? "9+" : unreadNotifications.length}
+                      </span>
+                    )}
+                  </button>
 
-                <div>
-                  <strong>Farmer</strong>
-                  <span>SmartAgri User</span>
+                  {showNotifications && (
+                    <div className="notification-panel">
+                      <div className="notification-panel-header">
+                        <div>
+                          <span className="section-label">SMART FARM</span>
+                          <h3>Notifications</h3>
+                        </div>
+                        <button className="notification-close" onClick={() => setShowNotifications(false)}>✕</button>
+                      </div>
+
+                      <div className="notification-summary">
+                        <span>{unreadNotifications.length} unread</span>
+                        <button onClick={markAllNotificationsRead}>Mark all read</button>
+                      </div>
+
+                      <div className="notification-list">
+                        {notifications.length === 0 ? (
+                          <div className="notification-empty">
+                            <span>🌱</span>
+                            <strong>No notifications</strong>
+                            <p>SmartAgri is monitoring your farm conditions.</p>
+                          </div>
+                        ) : (
+                          notifications.map((notification) => {
+                            const isRead = readNotifications.includes(notification.id);
+                            return (
+                              <div className={`notification-item ${isRead ? "read" : "unread"}`} key={notification.id}>
+                                <div className="notification-item-icon">{notification.icon}</div>
+                                <div className="notification-item-content">
+                                  <div className="notification-title-row">
+                                    <strong>{notification.title}</strong>
+                                    {!isRead && <span className="unread-dot"></span>}
+                                  </div>
+                                  <p>{notification.message}</p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="notification-footer">
+                        <button onClick={() => { setShowNotifications(false); setPage("dashboard"); }}>View Dashboard</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="profile"
+                  onClick={() => setPage("profile")}
+                  style={{ cursor: "pointer" }}
+                >
+                  👨‍🌾
+                  <div>
+                    <strong>{profileName}</strong>
+                    <span>SmartAgri User</span>
+                  </div>
                 </div>
 
               </div>
 
             </header>
 
-            {/* STATISTICS */}
+            {/* =================================
+                STATISTICS
+                ================================= */}
 
             <section className="dashboard-stats">
 
@@ -1052,7 +1081,13 @@ function App() {
                 <div className="card-icon">💧</div>
                 <p>Soil Moisture</p>
                 <h2>{soilMoisture}%</h2>
-                <span>From Soil Analysis</span>
+                <span>
+                  {Number(soilMoisture) < 30
+                    ? "Low"
+                    : Number(soilMoisture) > 70
+                    ? "High"
+                    : "Optimal"}
+                </span>
               </div>
 
               <div className="dashboard-card">
@@ -1087,9 +1122,26 @@ function App() {
                 <span>Registered →</span>
               </div>
 
+              <div className="dashboard-card">
+                <div className="card-icon">🤖</div>
+                <p>AI Crop</p>
+                <h2>
+                  {cropRecommendation?.recommendation?.crop || "--"}
+                </h2>
+                <span>
+                  {cropRecommendation?.recommendation?.confidence
+                    ? `${cropRecommendation.recommendation.confidence}% confidence`
+                    : soilData
+                    ? "Analyzing..."
+                    : "Complete soil analysis"}
+                </span>
+              </div>
+
             </section>
 
-            {/* MAIN DASHBOARD GRID */}
+            {/* =================================
+                MAIN DASHBOARD GRID
+                ================================= */}
 
             <section className="dashboard-grid">
 
@@ -1100,11 +1152,15 @@ function App() {
                 <div className="panel-header">
 
                   <div>
+
                     <span className="section-label">
                       SMART ANALYTICS
                     </span>
 
-                    <h2>Farm Analytics</h2>
+                    <h2>
+                      Farm Analytics
+                    </h2>
+
                   </div>
 
                   <span className="ai-badge">
@@ -1116,9 +1172,17 @@ function App() {
                 <div className="analytics-grid">
 
                   <div className="analytics-card">
-                    <span className="analytics-icon">💧</span>
+
+                    <span className="analytics-icon">
+                      💧
+                    </span>
+
                     <p>Soil Moisture</p>
-                    <h3>{soilMoisture}%</h3>
+
+                    <h3>
+                      {soilMoisture}%
+                    </h3>
+
                     <span className="analytics-status">
                       {Number(soilMoisture) < 30
                         ? "Low"
@@ -1126,45 +1190,67 @@ function App() {
                         ? "High"
                         : "Optimal"}
                     </span>
+
                   </div>
 
                   <div className="analytics-card">
-                    <span className="analytics-icon">🌡️</span>
+
+                    <span className="analytics-icon">
+                      🌡️
+                    </span>
+
                     <p>Temperature</p>
+
                     <h3>
                       {dashboardWeather
                         ? `${dashboardWeather.temperature_2m}°C`
                         : "--"}
                     </h3>
+
                     <span className="analytics-status">
                       Live
                     </span>
+
                   </div>
 
                   <div className="analytics-card">
-                    <span className="analytics-icon">💨</span>
+
+                    <span className="analytics-icon">
+                      💨
+                    </span>
+
                     <p>Humidity</p>
+
                     <h3>
                       {dashboardWeather
                         ? `${dashboardWeather.relative_humidity_2m}%`
                         : "--"}
                     </h3>
+
                     <span className="analytics-status">
                       Live
                     </span>
+
                   </div>
 
                   <div className="analytics-card">
-                    <span className="analytics-icon">🌧️</span>
+
+                    <span className="analytics-icon">
+                      🌧️
+                    </span>
+
                     <p>Rainfall</p>
+
                     <h3>
                       {dashboardWeather
                         ? `${dashboardWeather.precipitation} mm`
                         : "--"}
                     </h3>
+
                     <span className="analytics-status">
                       Live
                     </span>
+
                   </div>
 
                 </div>
@@ -1178,6 +1264,7 @@ function App() {
                 <div className="panel-header">
 
                   <div>
+
                     <span className="section-label">
                       FARM INTELLIGENCE
                     </span>
@@ -1185,21 +1272,17 @@ function App() {
                     <h2>
                       Farm Health Overview
                     </h2>
+
                   </div>
 
                   <div className="health-status">
+
                     <span>
-                      {farmHealth.status === "Healthy" ||
-                      farmHealth.status === "Moderate"
-                        ? "🟢"
-                        : farmHealth.status === "Monitor Conditions"
-                        ? "🟡"
-                        : farmHealth.status === "Needs Attention"
-                        ? "🔴"
-                        : "🔄"}
+                      {farmHealth.icon}
                     </span>
 
                     {farmHealth.status}
+
                   </div>
 
                 </div>
@@ -1209,13 +1292,19 @@ function App() {
                   <div className="health-score">
 
                     <div className="health-circle">
-                      <strong>{farmHealth.score}</strong>
-                      <span>/100</span>
+                      <span>🌱</span>
                     </div>
 
                     <div>
-                      <h3>{farmHealth.status}</h3>
-                      <p>{farmHealth.message}</p>
+
+                      <h3>
+                        {farmHealth.status}
+                      </h3>
+
+                      <p>
+                        {farmHealth.message}
+                      </p>
+
                     </div>
 
                   </div>
@@ -1223,242 +1312,98 @@ function App() {
                   <div className="health-checks">
 
                     <div className="health-check">
+
                       <span>💧</span>
+
                       <div>
-                        <strong>Soil Moisture</strong>
-                        <p>{Number(soilMoisture)}%</p>
-                        <small>
+
+                        <strong>
+                          Soil Moisture
+                        </strong>
+
+                        <p>
                           {Number(soilMoisture) >= 40 &&
                           Number(soilMoisture) <= 70
                             ? "Optimal"
                             : Number(soilMoisture) < 40
                             ? "Low"
                             : "High"}
-                        </small>
+                        </p>
+
                       </div>
+
                     </div>
 
                     <div className="health-check">
+
                       <span>🌡️</span>
+
                       <div>
-                        <strong>Temperature</strong>
-                        <p>
-                          {dashboardWeather
-                            ? `${Number(
-                                dashboardWeather.temperature_2m
-                              ).toFixed(1)}°C`
-                            : "--"}
-                        </p>
-                        <small>
-                          {dashboardWeather
-                            ? Number(
-                                dashboardWeather.temperature_2m
-                              ) <= 35
-                              ? "Suitable"
-                              : Number(
-                                  dashboardWeather.temperature_2m
-                                ) <= 38
-                              ? "Warm"
-                              : "High"
-                            : "Loading..."}
-                        </small>
-                      </div>
-                    </div>
 
-                    <div className="health-check">
-                      <span>💨</span>
-                      <div>
-                        <strong>Humidity</strong>
-                        <p>
-                          {dashboardWeather
-                            ? `${Number(
-                                dashboardWeather.relative_humidity_2m
-                              ).toFixed(0)}%`
-                            : "--"}
-                        </p>
-                        <small>
-                          {dashboardWeather
-                            ? Number(
-                                dashboardWeather.relative_humidity_2m
-                              ) >= 40 &&
-                              Number(
-                                dashboardWeather.relative_humidity_2m
-                              ) <= 85
-                              ? "Normal"
-                              : Number(
-                                  dashboardWeather.relative_humidity_2m
-                                ) > 85
-                              ? "High"
-                              : "Low"
-                            : "Loading..."}
-                        </small>
-                      </div>
-                    </div>
-
-                    <div className="health-check">
-                      <span>🌧️</span>
-                      <div>
-                        <strong>Rainfall</strong>
-                        <p>
-                          {dashboardWeather
-                            ? `${Number(
-                                dashboardWeather.precipitation
-                              ).toFixed(1)} mm`
-                            : "--"}
-                        </p>
-                        <small>
-                          {dashboardWeather
-                            ? Number(
-                                dashboardWeather.precipitation
-                              ) > 10
-                              ? "High"
-                              : Number(
-                                  dashboardWeather.precipitation
-                                ) > 5
-                              ? "Moderate"
-                              : "Normal"
-                            : "Loading..."}
-                        </small>
-                      </div>
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* HEALTH FACTORS */}
-
-              <div className="dashboard-panel health-factors-panel">
-
-                <div className="panel-header">
-
-                  <div>
-                    <span className="section-label">
-                      AI HEALTH ANALYSIS
-                    </span>
-
-                    <h2>Health Factors</h2>
-
-                    <p className="dashboard-subtitle">
-                      SmartAgri analyzes your farm conditions
-                      to explain the current health score.
-                    </p>
-                  </div>
-
-                  <span className="ai-badge">
-                    AI
-                  </span>
-
-                </div>
-
-                <div className="health-checks">
-
-                  <div className="health-check">
-                    <span>{healthMoisture.icon}</span>
-                    <div>
-                      <strong>💧 Soil Moisture</strong>
-                      <p>{healthMoisture.status}</p>
-                    </div>
-                  </div>
-
-                  <div className="health-check">
-                    <span>{healthTemperature.icon}</span>
-                    <div>
-                      <strong>🌡️ Temperature</strong>
-                      <p>{healthTemperature.status}</p>
-                    </div>
-                  </div>
-
-                  <div className="health-check">
-                    <span>{healthHumidity.icon}</span>
-                    <div>
-                      <strong>💨 Humidity</strong>
-                      <p>{healthHumidity.status}</p>
-                    </div>
-                  </div>
-
-                  <div className="health-check">
-                    <span>{healthRainfall.icon}</span>
-                    <div>
-                      <strong>🌧️ Rainfall</strong>
-                      <p>{healthRainfall.status}</p>
-                    </div>
-                  </div>
-
-                  <div className="health-check">
-                    <span>{healthSoil.icon}</span>
-                    <div>
-                      <strong>🧪 Soil NPK &amp; pH</strong>
-                      <p>{healthSoil.status}</p>
-                    </div>
-                  </div>
-
-                  <div className="health-check">
-                    <span>{healthCrop.icon}</span>
-                    <div>
-                      <strong>🌱 Crop Health</strong>
-                      <p>{healthCrop.status}</p>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* SMART ALERTS */}
-
-              <div className="dashboard-panel smart-alerts-panel">
-
-                <div className="panel-header">
-
-                  <div>
-                    <span className="section-label">
-                      SMART FARM MONITORING
-                    </span>
-
-                    <h2>
-                      Alerts &amp; Recommendations
-                    </h2>
-
-                    <p className="dashboard-subtitle">
-                      SmartAgri continuously checks your
-                      farm conditions and provides useful
-                      recommendations.
-                    </p>
-                  </div>
-
-                  <span className="ai-badge">
-                    AI
-                  </span>
-
-                </div>
-
-                <div className="smart-alerts-list">
-
-                  {smartAlerts.map((alert, index) => (
-                    <div
-                      className={`smart-alert ${alert.type}`}
-                      key={`${alert.title}-${index}`}
-                    >
-
-                      <div className="smart-alert-icon">
-                        {alert.icon}
-                      </div>
-
-                      <div className="smart-alert-content">
                         <strong>
-                          {alert.title}
+                          Temperature
                         </strong>
 
                         <p>
-                          {alert.message}
+                          {dashboardWeather &&
+                          Number(
+                            dashboardWeather.temperature_2m
+                          ) <= 35
+                            ? "Suitable"
+                            : "High"}
                         </p>
+
                       </div>
 
                     </div>
-                  ))}
+
+                    <div className="health-check">
+
+                      <span>💨</span>
+
+                      <div>
+
+                        <strong>
+                          Humidity
+                        </strong>
+
+                        <p>
+                          {dashboardWeather &&
+                          Number(
+                            dashboardWeather.relative_humidity_2m
+                          ) <= 85
+                            ? "Normal"
+                            : "High"}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="health-check">
+
+                      <span>🌧️</span>
+
+                      <div>
+
+                        <strong>
+                          Rainfall
+                        </strong>
+
+                        <p>
+                          {dashboardWeather &&
+                          Number(
+                            dashboardWeather.precipitation
+                          ) > 5
+                            ? "High"
+                            : "Normal"}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
 
                 </div>
 
@@ -1471,6 +1416,7 @@ function App() {
                 <div className="panel-header">
 
                   <div>
+
                     <span className="section-label">
                       SMART FARM AI
                     </span>
@@ -1478,11 +1424,14 @@ function App() {
                     <h2>
                       Irrigation Intelligence
                     </h2>
+
                   </div>
 
                   <div className="irrigation-status-badge">
+
                     {irrigationStatus.icon}{" "}
                     {irrigationStatus.status}
+
                   </div>
 
                 </div>
@@ -1496,6 +1445,7 @@ function App() {
                     </div>
 
                     <div>
+
                       <span className="irrigation-label">
                         CURRENT RECOMMENDATION
                       </span>
@@ -1507,6 +1457,7 @@ function App() {
                       <p>
                         {irrigationStatus.message}
                       </p>
+
                     </div>
 
                   </div>
@@ -1514,26 +1465,43 @@ function App() {
                   <div className="irrigation-data">
 
                     <div>
-                      <span>Soil Moisture</span>
-                      <strong>{soilMoisture}%</strong>
+
+                      <span>
+                        Soil Moisture
+                      </span>
+
+                      <strong>
+                        {soilMoisture}%
+                      </strong>
+
                     </div>
 
                     <div>
-                      <span>Rainfall</span>
+
+                      <span>
+                        Rainfall
+                      </span>
+
                       <strong>
                         {dashboardWeather
                           ? `${dashboardWeather.precipitation} mm`
                           : "--"}
                       </strong>
+
                     </div>
 
                     <div>
-                      <span>Temperature</span>
+
+                      <span>
+                        Temperature
+                      </span>
+
                       <strong>
                         {dashboardWeather
                           ? `${dashboardWeather.temperature_2m}°C`
                           : "--"}
                       </strong>
+
                     </div>
 
                   </div>
@@ -1549,6 +1517,7 @@ function App() {
                 <div className="panel-header">
 
                   <div>
+
                     <span className="section-label">
                       WEATHER INTELLIGENCE
                     </span>
@@ -1556,16 +1525,20 @@ function App() {
                     <h2>
                       7-Day Forecast
                     </h2>
+
                   </div>
 
                   <div className="weather-risk-badge">
+
                     {weatherRisk.icon}{" "}
                     {weatherRisk.level} Risk
+
                   </div>
 
                 </div>
 
                 <div className="forecast-risk">
+
                   <strong>
                     Agricultural Weather Risk
                   </strong>
@@ -1573,11 +1546,13 @@ function App() {
                   <p>
                     {weatherRisk.message}
                   </p>
+
                 </div>
 
                 {weatherForecast &&
                   weatherForecast.time &&
                   weatherForecast.time.length > 0 && (
+
                     <div className="forecast-grid">
 
                       {weatherForecast.time.map(
@@ -1586,7 +1561,9 @@ function App() {
                           const dayName =
                             index === 0
                               ? "Today"
-                              : new Date(date).toLocaleDateString(
+                              : new Date(
+                                  date
+                                ).toLocaleDateString(
                                   "en-US",
                                   {
                                     weekday: "short",
@@ -1605,7 +1582,10 @@ function App() {
 
                               <span className="forecast-icon">
                                 {getForecastCondition(
-                                  weatherForecast.weather_code[index]
+                                  weatherForecast
+                                    .weather_code[
+                                    index
+                                  ]
                                 )}
                               </span>
 
@@ -1613,14 +1593,20 @@ function App() {
 
                                 <strong>
                                   {Math.round(
-                                    weatherForecast.temperature_2m_max[index]
+                                    weatherForecast
+                                      .temperature_2m_max[
+                                      index
+                                    ]
                                   )}
                                   °
                                 </strong>
 
                                 <span>
                                   {Math.round(
-                                    weatherForecast.temperature_2m_min[index]
+                                    weatherForecast
+                                      .temperature_2m_min[
+                                      index
+                                    ]
                                   )}
                                   °
                                 </span>
@@ -1628,11 +1614,17 @@ function App() {
                               </div>
 
                               <span className="forecast-rain">
+
                                 🌧️{" "}
+
                                 {
-                                  weatherForecast.precipitation_sum[index]
+                                  weatherForecast
+                                    .precipitation_sum[
+                                    index
+                                  ]
                                 }{" "}
                                 mm
+
                               </span>
 
                             </div>
@@ -1645,13 +1637,16 @@ function App() {
 
               </div>
 
-              {/* CROP RECOMMENDATION */}
+              {/* =================================
+                  CROP RECOMMENDATION
+                  ================================= */}
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
 
                   <div>
+
                     <p className="small-title">
                       AI ASSISTANT
                     </p>
@@ -1659,6 +1654,7 @@ function App() {
                     <h2>
                       Crop Recommendation
                     </h2>
+
                   </div>
 
                   <span className="ai-badge">
@@ -1680,6 +1676,7 @@ function App() {
                       <div className="crop-result-header">
 
                         <div>
+
                           <span className="ai-result-label">
                             AI RECOMMENDATION
                           </span>
@@ -1692,6 +1689,7 @@ function App() {
                                 ? "Analyzing..."
                                 : "Complete Soil Analysis")}
                           </h3>
+
                         </div>
 
                         <span className="ai-status">
@@ -1701,51 +1699,74 @@ function App() {
                       </div>
 
                       <p className="crop-reason">
+
                         {cropRecommendation
                           ?.recommendation
                           ?.reason ||
                           (soilData
                             ? "Analyzing your latest soil and environmental conditions..."
                             : "Complete Soil Analysis to receive a crop recommendation.")}
+
                       </p>
 
                       <div className="crop-input-summary">
 
                         <div>
+
                           <span>N</span>
+
                           <strong>
-                            {soilData?.nitrogen ?? "--"}
+                            {soilData?.nitrogen ??
+                              "--"}
                           </strong>
+
                         </div>
 
                         <div>
+
                           <span>P</span>
+
                           <strong>
-                            {soilData?.phosphorus ?? "--"}
+                            {soilData?.phosphorus ??
+                              "--"}
                           </strong>
+
                         </div>
 
                         <div>
+
                           <span>K</span>
+
                           <strong>
-                            {soilData?.potassium ?? "--"}
+                            {soilData?.potassium ??
+                              "--"}
                           </strong>
+
                         </div>
 
                         <div>
+
                           <span>pH</span>
+
                           <strong>
                             {soilData?.ph ?? "--"}
                           </strong>
+
                         </div>
 
                         <div>
-                          <span>Moisture</span>
+
+                          <span>
+                            Moisture
+                          </span>
+
                           <strong>
-                            {soilData?.moisture != null
+                            {soilData?.moisture !=
+                            null
                               ? `${soilData.moisture}%`
                               : "--"}
                           </strong>
+
                         </div>
 
                       </div>
@@ -1753,18 +1774,25 @@ function App() {
                     </div>
 
                     <div className="confidence">
-                      <span>Confidence</span>
+
+                      <span>
+                        Confidence
+                      </span>
 
                       <strong>
+
                         {cropRecommendation
                           ?.recommendation
                           ?.confidence
                           ? `${cropRecommendation.recommendation.confidence}%`
                           : "--"}
+
                       </strong>
+
                     </div>
 
                     <div className="progress">
+
                       <div
                         style={{
                           width: `${
@@ -1774,6 +1802,7 @@ function App() {
                           }%`,
                         }}
                       ></div>
+
                     </div>
 
                   </div>
@@ -1782,20 +1811,25 @@ function App() {
 
                 <button
                   className="primary-btn"
-                  onClick={() => setPage("crop")}
+                  onClick={() =>
+                    setPage("crop")
+                  }
                 >
                   View Recommendation →
                 </button>
 
               </div>
 
-              {/* FERTILIZER INTELLIGENCE */}
+              {/* =========================================
+                  FERTILIZER INTELLIGENCE
+                  ========================================= */}
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
 
                   <div>
+
                     <p className="small-title">
                       AI ASSISTANT
                     </p>
@@ -1803,6 +1837,7 @@ function App() {
                     <h2>
                       Fertilizer Intelligence
                     </h2>
+
                   </div>
 
                   <span className="ai-badge">
@@ -1844,6 +1879,7 @@ function App() {
 
                     <div>
                       <span>Nitrogen</span>
+
                       <strong>
                         {fertilizerRecommendation.nitrogen}
                       </strong>
@@ -1851,6 +1887,7 @@ function App() {
 
                     <div>
                       <span>Phosphorus</span>
+
                       <strong>
                         {fertilizerRecommendation.phosphorus}
                       </strong>
@@ -1858,6 +1895,7 @@ function App() {
 
                     <div>
                       <span>Potassium</span>
+
                       <strong>
                         {fertilizerRecommendation.potassium}
                       </strong>
@@ -1865,6 +1903,7 @@ function App() {
 
                     <div>
                       <span>Soil pH</span>
+
                       <strong>
                         {fertilizerRecommendation.ph}
                       </strong>
@@ -1889,20 +1928,25 @@ function App() {
 
                 <button
                   className="primary-btn"
-                  onClick={() => setPage("fertilizer")}
+                  onClick={() =>
+                    setPage("fertilizer")
+                  }
                 >
                   View Fertilizer Recommendation →
                 </button>
 
               </div>
 
-              {/* DISEASE INTELLIGENCE */}
+              {/* =========================================
+                  DISEASE INTELLIGENCE
+                  ========================================= */}
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
 
                   <div>
+
                     <p className="small-title">
                       AI CROP HEALTH
                     </p>
@@ -1910,6 +1954,7 @@ function App() {
                     <h2>
                       Disease Detection
                     </h2>
+
                   </div>
 
                   <span className="ai-badge">
@@ -1950,26 +1995,35 @@ function App() {
                   <div className="disease-details">
 
                     <div>
+
                       <span>Crop</span>
+
                       <strong>
                         {diseaseResult.crop || "--"}
                       </strong>
+
                     </div>
 
                     <div>
+
                       <span>Status</span>
+
                       <strong>
                         {diseaseResult.status || "--"}
                       </strong>
+
                     </div>
 
                     <div>
+
                       <span>Confidence</span>
+
                       <strong>
                         {diseaseResult.confidence
                           ? `${diseaseResult.confidence}%`
                           : "--"}
                       </strong>
+
                     </div>
 
                   </div>
@@ -1977,20 +2031,25 @@ function App() {
 
                 <button
                   className="primary-btn"
-                  onClick={() => setPage("disease")}
+                  onClick={() =>
+                    setPage("disease")
+                  }
                 >
                   Open Disease Detection →
                 </button>
 
               </div>
 
-              {/* CURRENT WEATHER */}
+              {/* =================================
+                  CURRENT WEATHER
+                  ================================= */}
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
 
                   <div>
+
                     <p className="small-title">
                       WEATHER
                     </p>
@@ -1998,6 +2057,7 @@ function App() {
                     <h2>
                       Today's Weather
                     </h2>
+
                   </div>
 
                   <span className="weather-icon">
@@ -2023,30 +2083,45 @@ function App() {
                 <div className="weather-details">
 
                   <div>
-                    <span>Humidity</span>
+
+                    <span>
+                      Humidity
+                    </span>
+
                     <strong>
                       {dashboardWeather
                         ? `${dashboardWeather.relative_humidity_2m}%`
                         : "--"}
                     </strong>
+
                   </div>
 
                   <div>
-                    <span>Wind</span>
+
+                    <span>
+                      Wind
+                    </span>
+
                     <strong>
                       {dashboardWeather
                         ? `${dashboardWeather.wind_speed_10m} km/h`
                         : "--"}
                     </strong>
+
                   </div>
 
                   <div>
-                    <span>Rain</span>
+
+                    <span>
+                      Rain
+                    </span>
+
                     <strong>
                       {dashboardWeather
                         ? `${dashboardWeather.precipitation} mm`
                         : "--"}
                     </strong>
+
                   </div>
 
                 </div>
@@ -2055,13 +2130,16 @@ function App() {
 
             </section>
 
-            {/* SMART RECOMMENDATIONS */}
+            {/* =================================
+                SMART RECOMMENDATIONS
+                ================================= */}
 
             <section className="dashboard-panel recommendations">
 
               <div className="panel-header">
 
                 <div>
+
                   <p className="small-title">
                     SMART INSIGHTS
                   </p>
@@ -2069,9 +2147,12 @@ function App() {
                   <h2>
                     Today's Recommendations
                   </h2>
+
                 </div>
 
-                <span>✨</span>
+                <span>
+                  ✨
+                </span>
 
               </div>
 
@@ -2082,15 +2163,22 @@ function App() {
                   <span>💧</span>
 
                   <div>
-                    <strong>Irrigation</strong>
+
+                    <strong>
+                      Irrigation
+                    </strong>
 
                     <p>
+
                       {dashboardWeather
-                        ? dashboardWeather.precipitation > 2
+                        ? dashboardWeather.precipitation >
+                          2
                           ? "Rainfall is currently present. Irrigation may not be required."
                           : "No significant rainfall detected. Check soil moisture before irrigation."
                         : "Checking current weather conditions..."}
+
                     </p>
+
                   </div>
 
                 </div>
@@ -2100,17 +2188,25 @@ function App() {
                   <span>🌱</span>
 
                   <div>
-                    <strong>Crop Health</strong>
+
+                    <strong>
+                      Crop Health
+                    </strong>
 
                     <p>
+
                       {dashboardWeather
-                        ? dashboardWeather.temperature_2m > 35
+                        ? dashboardWeather.temperature_2m >
+                          35
                           ? "High temperature detected. Monitor crops for heat stress and provide adequate irrigation."
-                          : dashboardWeather.relative_humidity_2m > 85
+                          : dashboardWeather.relative_humidity_2m >
+                            85
                           ? "High humidity detected. Monitor crops for fungal diseases and leaf moisture."
                           : "Current temperature and humidity conditions are favorable for crop health."
                         : "Checking current conditions..."}
+
                     </p>
+
                   </div>
 
                 </div>
@@ -2120,17 +2216,25 @@ function App() {
                   <span>☁️</span>
 
                   <div>
-                    <strong>Weather Alert</strong>
+
+                    <strong>
+                      Weather Alert
+                    </strong>
 
                     <p>
+
                       {dashboardWeather
-                        ? dashboardWeather.precipitation > 5
+                        ? dashboardWeather.precipitation >
+                          5
                           ? "Heavy rainfall is currently detected. Avoid unnecessary irrigation."
-                          : dashboardWeather.precipitation > 0
+                          : dashboardWeather.precipitation >
+                            0
                           ? "Rainfall is currently detected. Monitor your field conditions."
                           : "No rainfall is currently detected. Continue monitoring the weather."
                         : "Checking current weather conditions..."}
+
                     </p>
+
                   </div>
 
                 </div>
@@ -2142,64 +2246,77 @@ function App() {
           </>
         )}
 
-        {/* OTHER PAGES */}
+        {/* =====================================
+            OTHER PAGES
+            ===================================== */}
 
-        {page === "crop" && <CropRecommendation />}
-        {page === "disease" && <DiseaseDetection />}
-        {page === "irrigation" && <SmartIrrigation />}
-        {page === "weather" && <Weather />}
-        {page === "soil" && <SoilAnalysis />}
-        {page === "fertilizer" && <FertilizerRecommendation />}
-        {page === "farm" && <MyFarm />}
+        {page === "crop" && (
+          <CropRecommendation />
+        )}
+
+        {page === "disease" && (
+          <DiseaseDetection />
+        )}
+
+        {page === "irrigation" && (
+          <SmartIrrigation />
+        )}
+
+        {page === "weather" && (
+          <Weather />
+        )}
+
+        {page === "soil" && (
+          <SoilAnalysis />
+        )}
+
+        {page === "fertilizer" && (
+          <FertilizerRecommendation />
+        )}
+
+        {page === "farm" && (
+          <MyFarm />
+        )}
+        {page === "profile" && (
+  <Profile />
+)}
+{page === "signup" && (
+  <SignUp />
+)}
 
         {page === "settings" && (
           <section className="settings-page">
-
             <header className="dashboard-header">
-
               <div>
-                <p className="small-title">
-                  SMART AGRICULTURE
-                </p>
-
-                <h1>
-                  Settings ⚙️
-                </h1>
-
+                <p className="small-title">SMART AGRICULTURE</p>
+                <h1>Settings ⚙️</h1>
                 <p className="dashboard-subtitle">
                   Manage your SmartAgri preferences and application data.
                 </p>
               </div>
 
-              <div className="profile">
+              <div
+  className="profile"
+  onClick={() => setPage("profile")}
+  style={{ cursor: "pointer" }}
+>
                 👨‍🌾
-
                 <div>
-                  <strong>Farmer</strong>
+                  <strong>{profileName}</strong>
                   <span>SmartAgri User</span>
                 </div>
               </div>
-
             </header>
 
             <div className="dashboard-panel">
-
               <div className="panel-header">
-
                 <div>
-                  <p className="small-title">
-                    PROFILE
-                  </p>
-
-                  <h2>
-                    Farmer Profile
-                  </h2>
+                  <p className="small-title">PROFILE</p>
+                  <h2>Farmer Profile</h2>
                 </div>
-
               </div>
 
               <div className="settings-grid">
-
                 <div className="settings-item">
                   <span>👤 Name</span>
                   <strong>Farmer</strong>
@@ -2219,105 +2336,64 @@ function App() {
                   <span>🌦️ Weather</span>
                   <strong>Live Weather</strong>
                 </div>
-
               </div>
-
             </div>
 
             <div className="dashboard-panel">
-
               <div className="panel-header">
-
                 <div>
-                  <p className="small-title">
-                    APPLICATION
-                  </p>
-
-                  <h2>
-                    Preferences
-                  </h2>
+                  <p className="small-title">APPLICATION</p>
+                  <h2>Preferences</h2>
                 </div>
-
               </div>
 
               <div className="settings-options">
-
                 <div className="settings-option">
-
                   <div>
-                    <strong>
-                      Live Weather Updates
-                    </strong>
-
+                    <strong>Live Weather Updates</strong>
                     <p>
-                      SmartAgri automatically refreshes dashboard weather information.
+                      SmartAgri automatically refreshes dashboard weather
+                      information.
                     </p>
                   </div>
-
-                  <span className="setting-status">
-                    ON
-                  </span>
-
+                  <span className="setting-status">ON</span>
                 </div>
 
                 <div className="settings-option">
-
                   <div>
-                    <strong>
-                      AI Recommendations
-                    </strong>
-
+                    <strong>AI Recommendations</strong>
                     <p>
-                      Crop and fertilizer recommendations use your latest soil information.
+                      Crop and fertilizer recommendations use your latest
+                      soil information.
                     </p>
                   </div>
-
-                  <span className="setting-status">
-                    ON
-                  </span>
-
+                  <span className="setting-status">ON</span>
                 </div>
 
                 <div className="settings-option">
-
                   <div>
-                    <strong>
-                      Saved Farm Data
-                    </strong>
-
+                    <strong>Saved Farm Data</strong>
                     <p>
-                      Farm information is stored through the SmartAgri backend and database.
+                      Farm information is stored through the SmartAgri
+                      backend and database.
                     </p>
                   </div>
-
-                  <span className="setting-status">
-                    ACTIVE
-                  </span>
-
+                  <span className="setting-status">ACTIVE</span>
                 </div>
-
               </div>
-
             </div>
 
             <div className="dashboard-panel">
-
               <div className="panel-header">
-
                 <div>
-                  <p className="small-title">
-                    ACCOUNT
-                  </p>
-
-                  <h2>
-                    Session
-                  </h2>
+                  <p className="small-title">ACCOUNT</p>
+                  <h2>Session</h2>
                 </div>
-
               </div>
 
               <p className="dashboard-subtitle">
-                Login and account authentication will be connected here in the next development step.
+                Login and account authentication will be connected here in
+                the next development step.
               </p>
 
               <button
@@ -2326,9 +2402,7 @@ function App() {
               >
                 ← Back to Dashboard
               </button>
-
             </div>
-
           </section>
         )}
 
